@@ -5,6 +5,8 @@ defmodule Q.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    Logger.configure(level: :info)
+
     children = [
       Q.Repo,
       {Q.Producer, []},
@@ -15,6 +17,14 @@ defmodule Q.Application do
       },
       %{
         id: 2,
+        start: {Q.Consumer, :start_link, [[]]}
+      },
+      %{
+        id: 3,
+        start: {Q.Consumer, :start_link, [[]]}
+      },
+      %{
+        id: 4,
         start: {Q.Consumer, :start_link, [[]]}
       },
       Q.DatabaseListener

@@ -1,21 +1,23 @@
 # Q
 
-**TODO: Add description**
+## Description
+
+Q is a basic task queue system built using Elixir and Postgres. The aim was to model it on similar architectures common in cloud-based systems.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `q` to your list of dependencies in `mix.exs`:
+Install dependencies:
 
-```elixir
-def deps do
-  [
-    {:q, "~> 0.1.0"}
-  ]
-end
+```bash
+mix deps.get
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/q>.
+## Running
 
+Run the task queue system using:
+
+```bash
+mix run --no-halt
+```
+
+The system will start and run continuously until you stop it manually.

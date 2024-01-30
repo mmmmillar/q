@@ -10,6 +10,8 @@ defmodule Q.DatabaseListener do
   end
 
   def init(_args) do
+    seed_data(20000)
+
     {:ok, _} = load_existing_jobs()
 
     {:ok, pid} = Postgrex.Notifications.start_link(Q.Repo.config() |> Keyword.merge(pool_size: 1))
@@ -26,7 +28,7 @@ defmodule Q.DatabaseListener do
     {:noreply, state}
   end
 
-  def load_existing_jobs do
+  defp load_existing_jobs do
     query =
       from(job in Q.JobRecord,
         where: job.status == "pending",
@@ -36,6 +38,30 @@ defmodule Q.DatabaseListener do
     Q.Repo.transaction(fn ->
       Enum.each(Q.Repo.stream(query), &send_job_to_producer/1)
     end)
+  end
+
+  defp seed_data(num_records) do
+    Stream.chunk_every(1..num_records, 5000)
+    |> Stream.each(&seed_batch/1)
+    |> Stream.run()
+  end
+
+  defp seed_batch(batch) do
+    now = NaiveDateTime.truncate(DateTime.to_naive(DateTime.utc_now()), :second)
+
+    data =
+      Enum.reduce(batch, [], fn _, acc ->
+        acc ++
+          [
+            %{
+              inserted_at: now,
+              updated_at: now
+            }
+          ]
+      end)
+
+    Q.Repo.insert_all(Q.JobRecord, data)
+    Process.sleep(10000)
   end
 
   defp send_job_to_producer(id), do: GenStage.cast(Q.Producer, {:push_job, id})
