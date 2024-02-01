@@ -8,6 +8,7 @@ defmodule Q.Application do
     Logger.configure(level: :info)
 
     children = [
+      Q.Stats,
       Q.Repo,
       {Q.Producer, []},
       {Q.ProducerConsumer, []},
@@ -27,7 +28,16 @@ defmodule Q.Application do
         id: 4,
         start: {Q.Consumer, :start_link, [[]]}
       },
-      Q.DatabaseListener
+      %{
+        id: 5,
+        start: {Q.Consumer, :start_link, [[]]}
+      },
+      %{
+        id: 6,
+        start: {Q.Consumer, :start_link, [[]]}
+      },
+      Q.DatabaseListener,
+      Q.Seeder
     ]
 
     opts = [strategy: :one_for_one, name: Q.Supervisor]

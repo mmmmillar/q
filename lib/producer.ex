@@ -12,6 +12,8 @@ defmodule Q.Producer do
   def handle_demand(demand, state) do
     {next_batch, tail} = Enum.split(state, demand)
 
+    Q.Stats.set_waiting(Enum.count(tail))
+
     {:noreply, next_batch, tail}
   end
 

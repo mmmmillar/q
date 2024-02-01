@@ -2,39 +2,34 @@ defmodule Q.Consumer do
   alias Q.JobRecord
   use GenStage
   require Logger
+  import Q.Constants
 
-  @timeout 10
+  @max_job_duration max_job_duration()
 
   def start_link(_initial) do
     GenStage.start_link(__MODULE__, :state_doesnt_matter)
   end
 
   def init(state) do
-    {:consumer, state, subscribe_to: [{Q.ProducerConsumer, max_demand: 2, min_demand: 0}]}
+    {:consumer, state, subscribe_to: [{Q.ProducerConsumer, max_demand: 1, min_demand: 0}]}
   end
 
   def handle_events(events, _from, state) do
     Enum.each(events, fn job_id ->
-      Logger.info("job #{job_id} received on consumer #{inspect(self())}")
-    end)
-
-    Enum.each(events, fn job_id ->
       task =
         Task.async(fn ->
           JobRecord.set_started(job_id)
-          run_job(job_id)
+          run_job()
         end)
 
-      case Task.yield(task, @timeout) || Task.shutdown(task) do
+      case Task.yield(task, @max_job_duration) || Task.shutdown(task) do
         {:ok, :job_run_failed} ->
-          Logger.warning("job #{job_id} failed")
           JobRecord.retry_job(job_id)
 
         {:ok, _result} ->
           JobRecord.set_completed(job_id)
 
         nil ->
-          Logger.warning("job #{job_id} timed out")
           JobRecord.retry_job(job_id)
       end
     end)
@@ -43,18 +38,19 @@ defmodule Q.Consumer do
     {:noreply, [], state}
   end
 
-  defp run_job(job_id) do
-    r = :rand.uniform(@timeout)
-    ms = 1 + r
+  defp run_job do
+    r = :rand.uniform(@max_job_duration)
+
+    # add a couple of milliseconds to simulate timeout
+    ms = 2 + r
 
     try do
-      if r == 1, do: raise("EXCEPTION!!")
+      # simulate errors
+      if r < 3, do: raise("EXCEPTION!!")
+
       Process.sleep(ms)
-      Logger.info("job #{job_id} completed in #{ms}ms on consumer #{inspect(self())}")
     rescue
-      error ->
-        Logger.error(error)
-        :job_run_failed
+      _error -> :job_run_failed
     end
   end
 end

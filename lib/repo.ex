@@ -36,8 +36,8 @@ defmodule Q.JobRecord do
           {:error, :not_found}
 
         record when record.retries >= 3 ->
-          Logger.error("job #{id} had too many retries")
           Q.Repo.update(Ecto.Changeset.change(record, %{status: "failed"}))
+          Q.Stats.increment_failed()
 
         record ->
           Q.Repo.update(
@@ -57,6 +57,7 @@ defmodule Q.JobRecord do
 
         record ->
           Q.Repo.update(Ecto.Changeset.change(record, changes))
+          Q.Stats.increment_completed()
       end
     end)
   end
