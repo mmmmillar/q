@@ -1,12 +1,12 @@
 defmodule Q.ProducerConsumer do
   use GenStage
 
-  def start_link(_initial) do
-    GenStage.start_link(__MODULE__, :state_doesnt_matter, name: __MODULE__)
+  def start_link(_init_args) do
+    GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def init(state) do
-    {:producer_consumer, state, subscribe_to: [Q.Producer]}
+  def init(initial) do
+    {:producer_consumer, initial, subscribe_to: [{Q.Producer, max_demand: 1, min_demand: 0}]}
   end
 
   def handle_events(events, _from, state) do

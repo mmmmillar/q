@@ -1,17 +1,16 @@
 defmodule Q.Consumer do
   alias Q.JobRecord
   use GenStage
-  require Logger
   import Q.Constants
 
   @max_job_duration max_job_duration()
 
-  def start_link(_initial) do
-    GenStage.start_link(__MODULE__, :state_doesnt_matter)
+  def start_link(_init_args) do
+    GenStage.start_link(__MODULE__, :ok)
   end
 
-  def init(state) do
-    {:consumer, state, subscribe_to: [{Q.ProducerConsumer, max_demand: 1, min_demand: 0}]}
+  def init(initial) do
+    {:consumer, initial, subscribe_to: [{Q.ProducerConsumer, max_demand: 1, min_demand: 0}]}
   end
 
   def handle_events(events, _from, state) do
