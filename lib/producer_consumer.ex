@@ -6,11 +6,12 @@ defmodule Q.ProducerConsumer do
   end
 
   def init(initial) do
-    {:producer_consumer, initial, subscribe_to: [{Q.Producer, max_demand: 1, min_demand: 0}]}
+    {:producer_consumer, initial, subscribe_to: [{Q.Producer, max_demand: 1}]}
   end
 
   def handle_events(events, _from, state) do
     # producer "middleware" - do things like filter before passing on to consumer
+    IO.inspect("passing events to consumer: #{inspect(events)}")
     {:noreply, events, state}
   end
 end

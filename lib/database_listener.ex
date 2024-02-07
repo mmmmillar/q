@@ -14,7 +14,6 @@ defmodule Q.DatabaseListener do
     {:ok, ref} = Postgrex.Notifications.listen(pid, @channel)
 
     {:ok, {pid, ref}}
-    {:ok, ref}
   end
 
   def handle_info({:notification, _pid, _ref, @channel, payload}, state) do

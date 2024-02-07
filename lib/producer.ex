@@ -13,6 +13,8 @@ defmodule Q.Producer do
 
   @impl true
   def handle_demand(demand, {backlog, existing_demand}) do
+    # IO.inspect("Received demand: #{demand}, existing_demand: #{existing_demand}")
+
     case :queue.len(backlog) do
       0 ->
         {:noreply, [], {backlog, existing_demand + demand}}
@@ -21,7 +23,7 @@ defmodule Q.Producer do
         n = min(demand, n)
         {items, backlog} = :queue.split(n, backlog)
         :queue.len(backlog) |> Q.Stats.set_waiting()
-        {:noreply, :queue.to_list(items), {backlog, demand}}
+        {:noreply, :queue.to_list(items), {backlog, existing_demand + demand - n}}
     end
   end
 
@@ -32,17 +34,12 @@ defmodule Q.Producer do
 
   @impl true
   def handle_cast({:enqueue, item}, {backlog, existing_demand}) do
+    IO.inspect("Received item: existing_demand: #{existing_demand}")
+
     backlog = :queue.in(item, backlog)
     {{:value, item}, backlog} = :queue.out(backlog)
     {:noreply, [item], {backlog, existing_demand - 1}}
   end
 
-  @impl true
-  def handle_call(:state, _from, state) do
-    {:reply, state, [], state}
-  end
-
   def enqueue(item), do: GenStage.cast(__MODULE__, {:enqueue, item})
-
-  def state, do: GenStage.call(__MODULE__, :state)
 end

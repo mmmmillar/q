@@ -10,13 +10,16 @@ defmodule Q.Consumer do
   end
 
   def init(initial) do
-    {:consumer, initial, subscribe_to: [{Q.ProducerConsumer, max_demand: 1, min_demand: 0}]}
+    Process.flag(:trap_exit, true)
+    Q.Stats.increment_consumer_count()
+    {:consumer, initial, subscribe_to: [{Q.ProducerConsumer, max_demand: 1}]}
   end
 
   def handle_events(events, _from, state) do
     Enum.each(events, fn job_id ->
       task =
         Task.async(fn ->
+          IO.inspect("#{job_id} is starting")
           JobRecord.set_started(job_id)
           run_job()
         end)
@@ -35,6 +38,11 @@ defmodule Q.Consumer do
 
     # As a consumer we never emit events
     {:noreply, [], state}
+  end
+
+  def handle_info({:EXIT, _pid, reason}, state) do
+    Q.Stats.decrement_consumer_count()
+    {:stop, reason, state}
   end
 
   defp run_job do

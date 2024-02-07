@@ -9,16 +9,8 @@ defmodule Q.Application do
       Q.Repo,
       Q.Producer,
       Q.ProducerConsumer,
-      %{
-        id: 1,
-        start: {Q.Consumer, :start_link, [[]]}
-      },
-      %{
-        id: 2,
-        start: {Q.Consumer, :start_link, [[]]}
-      },
+      Q.ConsumerSupervisor,
       Q.DatabaseListener,
-      Q.LoadManager,
       Q.Seeder
     ]
 
