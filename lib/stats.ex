@@ -47,17 +47,17 @@ defmodule Q.Stats do
     print()
   end
 
+  def get_consumer_count do
+    state = Agent.get(__MODULE__, & &1)
+    Map.get(state, :consumer_count)
+  end
+
   def set_waiting(count) do
     Agent.update(__MODULE__, fn state ->
       Map.replace(state, :jobs_waiting, count)
     end)
 
     print()
-  end
-
-  def get_waiting do
-    state = Agent.get(__MODULE__, & &1)
-    Map.get(state, :jobs_waiting)
   end
 
   defp print do

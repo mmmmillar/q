@@ -13,8 +13,6 @@ defmodule Q.Producer do
 
   @impl true
   def handle_demand(demand, {backlog, existing_demand}) do
-    # IO.inspect("Received demand: #{demand}, existing_demand: #{existing_demand}")
-
     case :queue.len(backlog) do
       0 ->
         {:noreply, [], {backlog, existing_demand + demand}}
@@ -34,8 +32,6 @@ defmodule Q.Producer do
 
   @impl true
   def handle_cast({:enqueue, item}, {backlog, existing_demand}) do
-    IO.inspect("Received item: existing_demand: #{existing_demand}")
-
     backlog = :queue.in(item, backlog)
     {{:value, item}, backlog} = :queue.out(backlog)
     {:noreply, [item], {backlog, existing_demand - 1}}

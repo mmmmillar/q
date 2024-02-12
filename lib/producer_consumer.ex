@@ -11,7 +11,6 @@ defmodule Q.ProducerConsumer do
 
   def handle_events(events, _from, state) do
     # producer "middleware" - do things like filter before passing on to consumer
-    IO.inspect("passing events to consumer: #{inspect(events)}")
     {:noreply, events, state}
   end
 end

@@ -2,8 +2,7 @@ defmodule Q.ConsumerSupervisor do
   use ConsumerSupervisor
 
   def start_link(_args) do
-    {:ok, pid} = ConsumerSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
-    {:ok, pid}
+    ConsumerSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   def init(:ok) do
@@ -18,7 +17,7 @@ defmodule Q.ConsumerSupervisor do
     ConsumerSupervisor.init(children,
       strategy: :one_for_one,
       subscribe_to: [
-        {Q.ProducerConsumer, max_demand: 5}
+        {Q.ProducerConsumer, max_demand: 10}
       ]
     )
   end

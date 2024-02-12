@@ -1,48 +1,31 @@
 defmodule Q.Consumer do
-  alias Q.JobRecord
-  use GenStage
   import Q.Constants
 
   @max_job_duration max_job_duration()
 
-  def start_link(_init_args) do
-    GenStage.start_link(__MODULE__, :ok)
-  end
+  def start_link(job_id) do
+    Task.start_link(fn ->
+      Q.Stats.increment_consumer_count()
 
-  def init(initial) do
-    Process.flag(:trap_exit, true)
-    Q.Stats.increment_consumer_count()
-    {:consumer, initial, subscribe_to: [{Q.ProducerConsumer, max_demand: 1}]}
-  end
-
-  def handle_events(events, _from, state) do
-    Enum.each(events, fn job_id ->
       task =
         Task.async(fn ->
-          IO.inspect("#{job_id} is starting")
-          JobRecord.set_started(job_id)
+          Q.JobRecord.set_started(job_id)
           run_job()
         end)
 
       case Task.yield(task, @max_job_duration) || Task.shutdown(task) do
         {:ok, :job_run_failed} ->
-          JobRecord.retry_job(job_id)
+          Q.JobRecord.retry_job(job_id)
 
         {:ok, _result} ->
-          JobRecord.set_completed(job_id)
+          Q.JobRecord.set_completed(job_id)
 
         nil ->
-          JobRecord.retry_job(job_id)
+          Q.JobRecord.retry_job(job_id)
       end
+
+      Q.Stats.decrement_consumer_count()
     end)
-
-    # As a consumer we never emit events
-    {:noreply, [], state}
-  end
-
-  def handle_info({:EXIT, _pid, reason}, state) do
-    Q.Stats.decrement_consumer_count()
-    {:stop, reason, state}
   end
 
   defp run_job do

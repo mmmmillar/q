@@ -1,6 +1,6 @@
 defmodule Q.Constants do
-  @max_job_duration 2000
-  @batch_interval 3000
+  @max_job_duration 15
+  @batch_interval 15
   @batch_size 3
 
   def max_job_duration, do: @max_job_duration
