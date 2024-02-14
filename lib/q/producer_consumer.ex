@@ -9,8 +9,8 @@ defmodule Q.ProducerConsumer do
     {:producer_consumer, initial, subscribe_to: [{Q.Producer, max_demand: 1}]}
   end
 
-  def handle_events(events, _from, state) do
+  def handle_events(jobs, _from, state) do
     # producer "middleware" - do things like filter before passing on to consumer
-    {:noreply, events, state}
+    {:noreply, jobs, state}
   end
 end

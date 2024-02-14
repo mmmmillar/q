@@ -18,53 +18,54 @@ defmodule Q.JobRecord do
     Q.Repo.insert_all(__MODULE__, data)
   end
 
-  def set_started(id) do
-    changes = %{status: "in_progress"}
-
+  def set_in_progress(id) do
     Q.Repo.transaction(fn ->
       case Q.Repo.get(__MODULE__, id) do
         nil ->
           {:error, :not_found}
 
         record ->
-          Ecto.Changeset.change(record, changes)
+          Ecto.Changeset.change(record, %{status: "in_progress"})
           |> Q.Repo.update()
       end
     end)
   end
 
-  def retry_job(id) do
+  def set_pending(id, retries) do
     Q.Repo.transaction(fn ->
       case Q.Repo.get(__MODULE__, id) do
         nil ->
           {:error, :not_found}
 
-        record when record.retries >= 3 ->
-          Ecto.Changeset.change(record, %{status: "failed"})
+        record ->
+          Ecto.Changeset.change(record, %{status: "pending", retries: retries})
           |> Q.Repo.update()
+      end
+    end)
+  end
 
-          Q.Stats.increment_failed()
+  def set_failed(id) do
+    Q.Repo.transaction(fn ->
+      case Q.Repo.get(__MODULE__, id) do
+        nil ->
+          {:error, :not_found}
 
         record ->
-          Ecto.Changeset.change(record, %{status: "pending", retries: record.retries + 1})
+          Ecto.Changeset.change(record, %{status: "failed"})
           |> Q.Repo.update()
       end
     end)
   end
 
   def set_completed(id) do
-    changes = %{status: "completed"}
-
     Q.Repo.transaction(fn ->
       case Q.Repo.get(__MODULE__, id) do
         nil ->
           {:error, :not_found}
 
         record ->
-          Ecto.Changeset.change(record, changes)
+          Ecto.Changeset.change(record, %{status: "completed"})
           |> Q.Repo.update()
-
-          Q.Stats.increment_completed()
       end
     end)
   end

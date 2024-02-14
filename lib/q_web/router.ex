@@ -17,7 +17,7 @@ defmodule QWeb.Router do
   scope "/", QWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", QLive
   end
 
   # Other scopes may use custom stacks.

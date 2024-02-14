@@ -1,6 +1,8 @@
 defmodule Q.Producer do
   use GenStage
-  require Logger
+  import Q.Constants
+
+  @job_topic job_topic()
 
   def start_link(_init_args) do
     GenStage.start_link(__MODULE__, {:queue.new(), 0}, name: __MODULE__)
@@ -20,22 +22,27 @@ defmodule Q.Producer do
       n ->
         n = min(demand, n)
         {items, backlog} = :queue.split(n, backlog)
-        :queue.len(backlog) |> Q.Stats.set_waiting()
+        broadcast_backlog_size(backlog)
         {:noreply, :queue.to_list(items), {backlog, existing_demand + demand - n}}
     end
   end
 
   @impl true
-  def handle_cast({:enqueue, item}, {backlog, 0}) do
-    {:noreply, [], {:queue.in(item, backlog), 0}}
+  def handle_cast({:enqueue, job}, {backlog, 0}) do
+    broadcast_backlog_size(backlog)
+    {:noreply, [], {:queue.in(job, backlog), 0}}
   end
 
   @impl true
-  def handle_cast({:enqueue, item}, {backlog, existing_demand}) do
-    backlog = :queue.in(item, backlog)
-    {{:value, item}, backlog} = :queue.out(backlog)
-    {:noreply, [item], {backlog, existing_demand - 1}}
+  def handle_cast({:enqueue, job}, {backlog, existing_demand}) do
+    backlog = :queue.in(job, backlog)
+    {{:value, job}, backlog} = :queue.out(backlog)
+
+    {:noreply, [job], {backlog, existing_demand - 1}}
   end
 
-  def enqueue(item), do: GenStage.cast(__MODULE__, {:enqueue, item})
+  def enqueue(job), do: GenStage.cast(__MODULE__, {:enqueue, job})
+
+  def broadcast_backlog_size(backlog),
+    do: QWeb.Endpoint.broadcast(@job_topic, "waiting", :queue.len(backlog))
 end

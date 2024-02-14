@@ -11,21 +11,17 @@ defmodule Q.Application do
 
     children = [
       QWeb.Telemetry,
-      Q.Stats,
       Q.Repo,
       {DNSCluster, query: Application.get_env(:q, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Q.PubSub},
+      # Start the Finch HTTP client for sending emails
+      {Finch, name: Q.Finch},
+      QWeb.Endpoint,
       Q.Producer,
       Q.ProducerConsumer,
       Q.ConsumerSupervisor,
       Q.DatabaseListener,
-      Q.Seeder,
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: Q.Finch},
-      # Start a worker by calling: Q.Worker.start_link(arg)
-      # {Q.Worker, arg},
-      # Start to serve requests, typically the last entry
-      QWeb.Endpoint
+      Q.Seeder
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

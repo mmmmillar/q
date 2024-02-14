@@ -17,7 +17,7 @@ defmodule Q.ConsumerSupervisor do
     ConsumerSupervisor.init(children,
       strategy: :one_for_one,
       subscribe_to: [
-        {Q.ProducerConsumer, max_demand: 10}
+        {Q.ProducerConsumer, max_demand: 8}
       ]
     )
   end

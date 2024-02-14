@@ -18,7 +18,12 @@ defmodule Q.DatabaseListener do
 
   def handle_info({:notification, _pid, _ref, @channel, payload}, state) do
     {:ok, json} = Poison.decode(payload)
-    GenStage.cast(Q.Producer, {:enqueue, json["id"]})
+
+    GenStage.cast(
+      Q.Producer,
+      {:enqueue, %{id: json["id"], status: json["status"], retries: json["retries"]}}
+    )
+
     {:noreply, state}
   end
 end
