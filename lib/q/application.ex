@@ -20,6 +20,7 @@ defmodule Q.Application do
       Q.Producer,
       Q.ProducerConsumer,
       Q.ConsumerSupervisor,
+      Q.FlowManager,
       Q.DatabaseListener,
       Q.Seeder
     ]

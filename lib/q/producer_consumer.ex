@@ -2,7 +2,7 @@ defmodule Q.ProducerConsumer do
   use GenStage
 
   def start_link(_init_args) do
-    GenStage.start_link(__MODULE__, %{}, name: __MODULE__)
+    GenStage.start_link(__MODULE__, %{pulling: true}, name: __MODULE__)
   end
 
   def init(initial) do
@@ -16,11 +16,19 @@ defmodule Q.ProducerConsumer do
   end
 
   def handle_subscribe(:consumer, _opts, _from, state) do
-    {:automatic, state}
+    send(self(), :demand_job)
+
+    {:automatic, Map.put(state, :pulling, true)}
+  end
+
+  def handle_call(:drain, _from, state) do
+    {:reply, false, [], Map.put(state, :pulling, false)}
   end
 
   def handle_info(:demand_job, state) do
-    GenStage.ask(state[:from], 1)
+    if state[:pulling] do
+      GenStage.ask(state[:from], 1)
+    end
 
     {:noreply, [], state}
   end

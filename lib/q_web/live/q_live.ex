@@ -25,8 +25,7 @@ defmodule QWeb.QLive do
          start_button_enabled: true,
          stop_button_enabled: false,
          max_demand: 10
-       },
-       producer_consumer_subscription: nil
+       }
      )}
   end
 
@@ -152,19 +151,16 @@ defmodule QWeb.QLive do
         %{topic: @config_topic, event: "max_demand", payload: max_demand},
         socket
       ) do
-    stop_consumers(Map.get(socket.assigns[:producer_consumer], :subscription))
-
-    {:ok, subscription} = start_consumers(max_demand)
+    GenServer.cast(Q.FlowManager, {:restart_flow, max_demand})
 
     {:noreply,
      assign(socket,
-       config: Map.put(socket.assigns[:config], :max_demand, max_demand),
-       producer_consumer_subscription: subscription
+       config: Map.put(socket.assigns[:config], :max_demand, max_demand)
      )}
   end
 
   def handle_event("start_processing", _params, socket) do
-    {:ok, subscription} = start_consumers(Map.get(socket.assigns[:config], :max_demand))
+    GenServer.cast(Q.FlowManager, {:start_flow, Map.get(socket.assigns[:config], :max_demand)})
 
     {:noreply,
      assign(socket,
@@ -173,13 +169,12 @@ defmodule QWeb.QLive do
            Map.put(socket.assigns[:config], :start_button_enabled, false),
            :stop_button_enabled,
            true
-         ),
-       producer_consumer_subscription: subscription
+         )
      )}
   end
 
   def handle_event("stop_processing", _params, socket) do
-    stop_consumers(socket.assigns[:producer_consumer_subscription])
+    GenServer.call(Q.FlowManager, :stop_flow)
 
     {:noreply,
      assign(socket,
@@ -188,8 +183,7 @@ defmodule QWeb.QLive do
            Map.put(socket.assigns[:config], :start_button_enabled, true),
            :stop_button_enabled,
            false
-         ),
-       producer_consumer_subscription: nil
+         )
      )}
   end
 
@@ -215,20 +209,5 @@ defmodule QWeb.QLive do
     QWeb.Endpoint.broadcast(@config_topic, "max_demand", String.to_integer(params["max_demand"]))
 
     {:noreply, socket}
-  end
-
-  defp start_consumers(max_demand) do
-    {:ok, subscription} =
-      GenStage.sync_subscribe(Process.whereis(Q.ConsumerSupervisor),
-        to: Q.ProducerConsumer,
-        max_demand: max_demand,
-        cancel: :transient
-      )
-
-    {:ok, subscription}
-  end
-
-  defp stop_consumers(consumer_subscription) do
-    GenStage.cancel({Process.whereis(Q.ProducerConsumer), consumer_subscription}, :shutdown)
   end
 end

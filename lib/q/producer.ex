@@ -49,6 +49,7 @@ defmodule Q.Producer do
 
   def enqueue(job), do: GenStage.cast(__MODULE__, {:enqueue, job})
 
-  def broadcast_backlog_size(backlog),
-    do: QWeb.Endpoint.broadcast(@job_topic, "waiting", :queue.len(backlog))
+  def broadcast_backlog_size(backlog) do
+    QWeb.Endpoint.broadcast(@job_topic, "waiting", :queue.len(backlog))
+  end
 end
