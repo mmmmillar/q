@@ -26,7 +26,7 @@ defmodule QWeb.QLive do
          stop_button_enabled: false,
          max_demand: 10
        },
-       consumer_supervisor_pid: nil
+       producer_consumer_subscription: nil
      )}
   end
 
@@ -58,7 +58,7 @@ defmodule QWeb.QLive do
     </div>
 
     <div class="dashboard-card">
-      <%= @config |> m2s %>
+      <%= @config |> Poison.encode!() %>
     </div>
 
     <div class="dashboard-card">
@@ -152,30 +152,19 @@ defmodule QWeb.QLive do
         %{topic: @config_topic, event: "max_demand", payload: max_demand},
         socket
       ) do
-    DynamicSupervisor.terminate_child(
-      Q.DynamicSupervisor,
-      socket.assigns[:consumer_supervisor_pid]
-    )
+    stop_consumers(Map.get(socket.assigns[:producer_consumer], :subscription))
 
-    {:ok, pid} =
-      DynamicSupervisor.start_child(
-        Q.DynamicSupervisor,
-        {Q.ConsumerSupervisor, max_demand: max_demand}
-      )
+    {:ok, subscription} = start_consumers(max_demand)
 
     {:noreply,
      assign(socket,
        config: Map.put(socket.assigns[:config], :max_demand, max_demand),
-       consumer_supervisor_pid: pid
+       producer_consumer_subscription: subscription
      )}
   end
 
   def handle_event("start_processing", _params, socket) do
-    {:ok, pid} =
-      DynamicSupervisor.start_child(
-        Q.DynamicSupervisor,
-        {Q.ConsumerSupervisor, max_demand: Map.get(socket.assigns[:config], :max_demand)}
-      )
+    {:ok, subscription} = start_consumers(Map.get(socket.assigns[:config], :max_demand))
 
     {:noreply,
      assign(socket,
@@ -185,15 +174,12 @@ defmodule QWeb.QLive do
            :stop_button_enabled,
            true
          ),
-       consumer_supervisor_pid: pid
+       producer_consumer_subscription: subscription
      )}
   end
 
   def handle_event("stop_processing", _params, socket) do
-    DynamicSupervisor.terminate_child(
-      Q.DynamicSupervisor,
-      socket.assigns[:consumer_supervisor_pid]
-    )
+    stop_consumers(socket.assigns[:producer_consumer_subscription])
 
     {:noreply,
      assign(socket,
@@ -203,7 +189,7 @@ defmodule QWeb.QLive do
            :stop_button_enabled,
            false
          ),
-       consumer_supervisor_pid: nil
+       producer_consumer_subscription: nil
      )}
   end
 
@@ -231,8 +217,18 @@ defmodule QWeb.QLive do
     {:noreply, socket}
   end
 
-  defp m2s(map) do
-    {:ok, str} = map |> Poison.encode()
-    str
+  defp start_consumers(max_demand) do
+    {:ok, subscription} =
+      GenStage.sync_subscribe(Process.whereis(Q.ConsumerSupervisor),
+        to: Q.ProducerConsumer,
+        max_demand: max_demand,
+        cancel: :transient
+      )
+
+    {:ok, subscription}
+  end
+
+  defp stop_consumers(consumer_subscription) do
+    GenStage.cancel({Process.whereis(Q.ProducerConsumer), consumer_subscription}, :shutdown)
   end
 end

@@ -19,9 +19,9 @@ defmodule Q.Application do
       QWeb.Endpoint,
       Q.Producer,
       Q.ProducerConsumer,
+      Q.ConsumerSupervisor,
       Q.DatabaseListener,
-      Q.Seeder,
-      {DynamicSupervisor, name: Q.DynamicSupervisor, strategy: :one_for_one}
+      Q.Seeder
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

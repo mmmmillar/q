@@ -1,11 +1,11 @@
 defmodule Q.ConsumerSupervisor do
   use ConsumerSupervisor
 
-  def start_link(init_args) do
-    ConsumerSupervisor.start_link(__MODULE__, init_args, name: __MODULE__)
+  def start_link(_init_args) do
+    ConsumerSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def init(initial) do
+  def init(_initial) do
     children = [
       %{
         id: Q.Consumer,
@@ -15,10 +15,7 @@ defmodule Q.ConsumerSupervisor do
     ]
 
     ConsumerSupervisor.init(children,
-      strategy: :one_for_one,
-      subscribe_to: [
-        {Q.ProducerConsumer, max_demand: initial[:max_demand]}
-      ]
+      strategy: :one_for_one
     )
   end
 end

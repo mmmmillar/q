@@ -43,31 +43,31 @@ defmodule Q.Consumer do
   end
 
   defp success(id) do
-    QWeb.Endpoint.broadcast(@job_topic, "completed", id)
     Q.JobRecord.set_completed(id)
+    QWeb.Endpoint.broadcast(@job_topic, "completed", id)
   end
 
   defp error(id, retries) do
     cond do
       retries >= 3 ->
-        QWeb.Endpoint.broadcast(@job_topic, "failed", id)
         Q.JobRecord.set_failed(id)
+        QWeb.Endpoint.broadcast(@job_topic, "failed", id)
 
       true ->
-        QWeb.Endpoint.broadcast(@job_topic, "error", id)
         Q.JobRecord.set_pending(id, retries + 1)
+        QWeb.Endpoint.broadcast(@job_topic, "error", id)
     end
   end
 
   defp timeout(id, retries) do
     cond do
       retries >= 3 ->
-        QWeb.Endpoint.broadcast(@job_topic, "failed", id)
         Q.JobRecord.set_failed(id)
+        QWeb.Endpoint.broadcast(@job_topic, "failed", id)
 
       true ->
-        QWeb.Endpoint.broadcast(@job_topic, "timeout", id)
         Q.JobRecord.set_pending(id, retries + 1)
+        QWeb.Endpoint.broadcast(@job_topic, "timeout", id)
     end
   end
 end
