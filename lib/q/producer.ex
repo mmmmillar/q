@@ -29,8 +29,9 @@ defmodule Q.Producer do
 
   @impl true
   def handle_cast({:enqueue, job}, {backlog, 0}) do
+    backlog = :queue.in(job, backlog)
     broadcast_backlog_size(backlog)
-    {:noreply, [], {:queue.in(job, backlog), 0}}
+    {:noreply, [], {backlog, 0}}
   end
 
   @impl true
@@ -39,6 +40,11 @@ defmodule Q.Producer do
     {{:value, job}, backlog} = :queue.out(backlog)
 
     {:noreply, [job], {backlog, existing_demand - 1}}
+  end
+
+  @impl true
+  def handle_call(:remove_demand, _from, {backlog, _existing_demand}) do
+    {:reply, 0, [], {backlog, 0}}
   end
 
   def enqueue(job), do: GenStage.cast(__MODULE__, {:enqueue, job})

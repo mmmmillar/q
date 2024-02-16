@@ -21,14 +21,25 @@ defmodule QWeb.QLive do
        timeouts: 0,
        config: %{
          batch_interval: batch_info[:batch_interval],
-         batch_size: batch_info[:batch_size]
-       }
+         batch_size: batch_info[:batch_size],
+         start_button_enabled: true,
+         stop_button_enabled: false
+       },
+       consumer_supervisor_pid: nil
      )}
   end
 
   def render(assigns) do
     ~H"""
     <div>
+      <div>
+        <button phx-click="start_processing" disabled={not @config[:start_button_enabled]}>
+          Start
+        </button>
+        <button phx-click="stop_processing" disabled={not @config[:stop_button_enabled]}>
+          Stop
+        </button>
+      </div>
       <form phx-submit="change_batch_interval">
         <label for="batch_interval">Batch Interval</label>
         <input type="number" name="batch_interval" value={@config[:batch_interval]} />
@@ -129,6 +140,39 @@ defmodule QWeb.QLive do
         socket
       ) do
     {:noreply, assign(socket, config: Map.put(socket.assigns[:config], :batch_size, batch_size))}
+  end
+
+  def handle_event("start_processing", _params, socket) do
+    {:ok, pid} = DynamicSupervisor.start_child(Q.DynamicSupervisor, Q.ConsumerSupervisor)
+
+    {:noreply,
+     assign(socket,
+       config:
+         Map.put(
+           Map.put(socket.assigns[:config], :start_button_enabled, false),
+           :stop_button_enabled,
+           true
+         ),
+       consumer_supervisor_pid: pid
+     )}
+  end
+
+  def handle_event("stop_processing", _params, socket) do
+    DynamicSupervisor.terminate_child(
+      Q.DynamicSupervisor,
+      socket.assigns[:consumer_supervisor_pid]
+    )
+
+    {:noreply,
+     assign(socket,
+       config:
+         Map.put(
+           Map.put(socket.assigns[:config], :start_button_enabled, true),
+           :stop_button_enabled,
+           false
+         ),
+       consumer_supervisor_pid: nil
+     )}
   end
 
   def handle_event("change_batch_interval", params, socket) do
