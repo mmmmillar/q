@@ -23,7 +23,8 @@ defmodule QWeb.QLive do
          batch_interval: batch_info[:batch_interval],
          batch_size: batch_info[:batch_size],
          start_button_enabled: true,
-         stop_button_enabled: false
+         stop_button_enabled: false,
+         max_demand: 10
        },
        consumer_supervisor_pid: nil
      )}
@@ -48,6 +49,11 @@ defmodule QWeb.QLive do
       <form phx-submit="change_batch_size">
         <label for="batch_size">Batch Size</label>
         <input type="number" name="batch_size" value={@config[:batch_size]} />
+      </form>
+
+      <form phx-submit="change_max_demand">
+        <label for="max_demand">Max Demand</label>
+        <input type="number" name="max_demand" value={@config[:max_demand]} />
       </form>
     </div>
 
@@ -142,8 +148,34 @@ defmodule QWeb.QLive do
     {:noreply, assign(socket, config: Map.put(socket.assigns[:config], :batch_size, batch_size))}
   end
 
+  def handle_info(
+        %{topic: @config_topic, event: "max_demand", payload: max_demand},
+        socket
+      ) do
+    DynamicSupervisor.terminate_child(
+      Q.DynamicSupervisor,
+      socket.assigns[:consumer_supervisor_pid]
+    )
+
+    {:ok, pid} =
+      DynamicSupervisor.start_child(
+        Q.DynamicSupervisor,
+        {Q.ConsumerSupervisor, max_demand: max_demand}
+      )
+
+    {:noreply,
+     assign(socket,
+       config: Map.put(socket.assigns[:config], :max_demand, max_demand),
+       consumer_supervisor_pid: pid
+     )}
+  end
+
   def handle_event("start_processing", _params, socket) do
-    {:ok, pid} = DynamicSupervisor.start_child(Q.DynamicSupervisor, Q.ConsumerSupervisor)
+    {:ok, pid} =
+      DynamicSupervisor.start_child(
+        Q.DynamicSupervisor,
+        {Q.ConsumerSupervisor, max_demand: Map.get(socket.assigns[:config], :max_demand)}
+      )
 
     {:noreply,
      assign(socket,
@@ -189,6 +221,12 @@ defmodule QWeb.QLive do
       Q.Seeder,
       {:update_batch_size, String.to_integer(params["batch_size"])}
     )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change_max_demand", params, socket) do
+    QWeb.Endpoint.broadcast(@config_topic, "max_demand", String.to_integer(params["max_demand"]))
 
     {:noreply, socket}
   end
