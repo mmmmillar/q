@@ -4,10 +4,10 @@ defmodule Q.Seeder do
 
   @config_topic config_topic()
 
-  def start_link(_init_args) do
+  def start_link(init_args) do
     GenServer.start_link(
       __MODULE__,
-      %{batch_interval: batch_interval(), batch_size: batch_size()},
+      %{batch_interval: init_args[:batch_interval], batch_size: init_args[:batch_size]},
       name: __MODULE__
     )
   end

@@ -5,6 +5,10 @@ defmodule Q.Application do
 
   use Application
 
+  @max_job_duration 2500
+  @batch_interval 1000
+  @batch_size 5
+
   @impl true
   def start(_type, _args) do
     Logger.configure(level: :info)
@@ -17,12 +21,12 @@ defmodule Q.Application do
       # Start the Finch HTTP client for sending emails
       {Finch, name: Q.Finch},
       QWeb.Endpoint,
-      Q.Producer,
+      {Q.Producer, max_job_duration: @max_job_duration},
       Q.ProducerConsumer,
       Q.ConsumerSupervisor,
       Q.FlowManager,
       Q.DatabaseListener,
-      Q.Seeder
+      {Q.Seeder, batch_interval: @batch_interval, batch_size: @batch_size}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

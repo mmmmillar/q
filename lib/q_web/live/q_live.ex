@@ -5,11 +5,14 @@ defmodule QWeb.QLive do
   @job_topic job_topic()
   @config_topic config_topic()
 
+  @max_demand 10
+
   def mount(_params, _session, socket) do
     QWeb.Endpoint.subscribe(@job_topic)
     QWeb.Endpoint.subscribe(@config_topic)
 
     batch_info = GenServer.call(Q.Seeder, :get_batch_info)
+    max_job_duration = GenServer.call(Q.Producer, :get_max_job_duration)
 
     {:ok,
      assign(socket,
@@ -24,7 +27,8 @@ defmodule QWeb.QLive do
          batch_size: batch_info[:batch_size],
          start_button_enabled: true,
          stop_button_enabled: false,
-         max_demand: 10
+         max_demand: @max_demand,
+         max_job_duration: max_job_duration
        }
      )}
   end
@@ -53,6 +57,10 @@ defmodule QWeb.QLive do
       <form phx-submit="change_max_demand">
         <label for="max_demand">Max Demand</label>
         <input type="number" name="max_demand" value={@config[:max_demand]} />
+      </form>
+      <form phx-submit="change_max_job_duration">
+        <label for="max_demand">Max Job Duration</label>
+        <input type="number" name="max_job_duration" value={@config[:max_job_duration]} />
       </form>
     </div>
 
@@ -159,6 +167,14 @@ defmodule QWeb.QLive do
      )}
   end
 
+  def handle_info(
+        %{topic: @config_topic, event: "max_job_duration", payload: max_job_duration},
+        socket
+      ) do
+    {:noreply,
+     assign(socket, config: Map.put(socket.assigns[:config], :max_job_duration, max_job_duration))}
+  end
+
   def handle_event("start_processing", _params, socket) do
     GenServer.cast(Q.FlowManager, {:start_flow, Map.get(socket.assigns[:config], :max_demand)})
 
@@ -207,6 +223,15 @@ defmodule QWeb.QLive do
 
   def handle_event("change_max_demand", params, socket) do
     QWeb.Endpoint.broadcast(@config_topic, "max_demand", String.to_integer(params["max_demand"]))
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change_max_job_duration", params, socket) do
+    GenServer.cast(
+      Q.Producer,
+      {:update_max_job_duration, String.to_integer(params["max_job_duration"])}
+    )
 
     {:noreply, socket}
   end

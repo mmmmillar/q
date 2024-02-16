@@ -1,14 +1,19 @@
 defmodule Q.Consumer do
   import Q.Constants
 
-  @max_job_duration max_job_duration()
   @job_topic job_topic()
 
-  def start_link(%{id: id, status: _status, retries: retries}) do
+  def start_link(%{
+        id: id,
+        status: _status,
+        retries: retries,
+        duration: duration,
+        max_job_duration: max_job_duration
+      }) do
     Task.start_link(fn ->
-      task = run_job(id)
+      task = run_job(id, duration)
 
-      case Task.yield(task, @max_job_duration) || Task.shutdown(task) do
+      case Task.yield(task, max_job_duration) || Task.shutdown(task) do
         {:ok, :job_run_failed} ->
           error(id, retries)
 
@@ -21,19 +26,17 @@ defmodule Q.Consumer do
     end)
   end
 
-  defp run_job(id) do
+  defp run_job(id, duration) do
     Task.async(fn ->
       QWeb.Endpoint.broadcast(@job_topic, "in_progress", id)
       Q.JobRecord.set_in_progress(id)
 
-      r = :rand.uniform(@max_job_duration)
-
       # add a couple of milliseconds to simulate timeout
-      ms = 2 + r
+      ms = 2 + duration
 
       try do
         # simulate errors
-        if r < 3, do: raise("EXCEPTION!!")
+        if duration < 3, do: raise("EXCEPTION!!")
 
         Process.sleep(ms)
       rescue
