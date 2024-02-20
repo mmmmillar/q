@@ -11,7 +11,7 @@ defmodule Q.Consumer do
         max_job_duration: max_job_duration
       }) do
     Task.start_link(fn ->
-      task = run_job(id, duration)
+      task = run_job(id, duration, max_job_duration)
 
       case Task.yield(task, max_job_duration) || Task.shutdown(task) do
         {:ok, :job_run_failed} ->
@@ -26,17 +26,17 @@ defmodule Q.Consumer do
     end)
   end
 
-  defp run_job(id, duration) do
+  defp run_job(id, duration, max_job_duration) do
     Task.async(fn ->
       QWeb.Endpoint.broadcast(@job_topic, "in_progress", id)
       Q.JobRecord.set_in_progress(id)
 
-      # add a couple of milliseconds to simulate timeout
-      ms = 2 + duration
+      # # simulate timeouts 15% of the time
+      ms = ceil(max_job_duration * 0.15) + duration
 
       try do
-        # simulate errors
-        if duration < 3, do: raise("EXCEPTION!!")
+        # simulate errors 4% of the time
+        if duration < max_job_duration * 0.04, do: raise("EXCEPTION!!")
 
         Process.sleep(ms)
       rescue

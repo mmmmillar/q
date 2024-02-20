@@ -58,6 +58,7 @@ defmodule QWeb.QLive do
         <label for="max_demand">Max Demand</label>
         <input type="number" name="max_demand" value={@config[:max_demand]} />
       </form>
+
       <form phx-submit="change_max_job_duration">
         <label for="max_demand">Max Job Duration</label>
         <input type="number" name="max_job_duration" value={@config[:max_job_duration]} />
